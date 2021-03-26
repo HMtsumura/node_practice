@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Socket.IO chat</title>
+    <style>
+        body {
+            margin: 0;
+            padding-bottom: 3rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #form {
+            background: rgba(0, 0, 0, 0.15);
+            padding: 0.25rem;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            height: 3rem;
+            box-sizing: border-box;
+            backdrop-filter: blur(10px);
+        }
+
+        #input {
+            border: none;
+            padding: 0 1rem;
+            flex-grow: 1;
+            border-radius: 2rem;
+            margin: 0.25rem;
+        }
+
+        #input:focus {
+            outline: none;
+        }
+
+        #form>button {
+            background: #333;
+            border: none;
+            padding: 0 1rem;
+            margin: 0.25rem;
+            border-radius: 3px;
+            outline: none;
+            color: #fff;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        #messages>li {
+            padding: 0.5rem 1rem;
+        }
+
+        #messages>li:nth-child(odd) {
+            background: #efefef;
+        }
+    </style>
+</head>
+
+<body>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+        <input id="input" autocomplete="off" /><button>Send</button>
+    </form>
+    <div class="login page">
+        <div class="form">
+            <h3 class="title">What's your nickname?</h3>
+            <input class="usernameInput" type="text" maxlength="14" />
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script>
+
+        // Initialize variables
+        const $window = $(window);
+        const $usernameInput = $('.usernameInput'); // Input for username
+        const $messages = $('.messages');           // Messages area
+        const $inputMessage = $('.inputMessage');   // Input message input box
+
+        const $loginPage = $('.login.page');        // The login page
+        const $chatPage = $('.chat.page');          // The chatroom page
+
+        const socket = io();
+
+        // Prompt for setting a username
+        let connected = false;
+        let typing = false;
+        let lastTypingTime;
+        let $currentInput = $usernameInput.focus();
+        let username;
+        let form = document.getElementById('form');
+        let input = document.getElementById('input');
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (input.value) {
+                socket.emit('message', input.value);
+                input.value = '';
+            }
+        });
+
+        socket.on('message', function (msg) {
+            var item = document.createElement('li');
+            item.textContent = msg;
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+        socket.on('user joined', function (newUser) {
+            console.log(newUser);
+            var item = document.createElement('li');
+            item.textContent = newUser.username + ': joined';
+            messages.appendChild(item);
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        // Sets the client's username
+        const setUsername = () => {
+            username = cleanInput($usernameInput.val().trim());
+
+            // If the username is valid
+            if (username) {
+                $loginPage.fadeOut();
+                $chatPage.show();
+                $loginPage.off('click');
+                $currentInput = $inputMessage.focus();
+
+                // Tell the server your username
+                socket.emit('add user', username);
+            }
+        }
+
+        // Prevents input from having injected markup
+        const cleanInput = (input) => {
+            return $('<div/>').text(input).html();
+        }
+
+        $window.keydown(event => {
+            // Auto-focus the current input when a key is typed
+            if (!(event.ctrlKey || event.metaKey || event.altKey)) {
+                $currentInput.focus();
+            }
+            // When the client hits ENTER on their keyboard
+            if (event.which === 13) {
+                if (username) {
+                    // socket.emit('stop typing');
+                    // typing = false;
+                } else {
+                    setUsername();
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
